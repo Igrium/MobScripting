@@ -1,0 +1,44 @@
+{
+    "schemaVersion": 1,
+    "id": "mob-scripting",
+    "version": "${version}",
+    "name": "Mob Scripting",
+    "description": "Advanced control over mob AI via commands!",
+    "authors": [
+        "Igrium"
+    ],
+    "contact": {
+        "homepage": "https://fabricmc.net/",
+        "sources": "https://github.com/FabricMC/fabric-example-mod"
+    },
+    "license": "CC0-1.0",
+    "icon": "assets/mob-scripting/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "com.igrium.mobscripting.MobScripting"
+        ],
+        "client": [
+            "com.igrium.mobscripting.MobScriptingClient"
+        ],
+        "cardinal-components": [
+            "com.igrium.mobscripting.MobScriptingComponents"
+        ]
+    },
+    "mixins": [
+        "mob-scripting.mixins.json",
+        {
+            "config": "mob-scripting.client.mixins.json",
+            "environment": "client"
+        }
+    ],
+    "depends": {
+        "fabricloader": ">=0.14.24",
+        "minecraft": "~1.20.2",
+        "java": ">=17",
+        "fabric-api": "*"
+    },
+    "suggests": {
+        "another-mod": "*"
+    }
+}
