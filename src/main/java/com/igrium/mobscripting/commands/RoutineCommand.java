@@ -1,6 +1,7 @@
 package com.igrium.mobscripting.commands;
 
 import com.igrium.mobscripting.EntityScriptComponent;
+import com.igrium.mobscripting.MobScripting;
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
 import com.mojang.brigadier.CommandDispatcher;
@@ -59,14 +60,21 @@ public class RoutineCommand {
     }
 
     private static int add(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        LivingEntity entity = getEntity(context);
-        EntityScriptComponent component = EntityScriptComponent.get(entity);
+        try {
+            LivingEntity entity = getEntity(context);
+            EntityScriptComponent component = EntityScriptComponent.get(entity);
 
-        var type = RegistryEntryArgumentType.getRegistryEntry(context, "type", ScriptRoutineType.REGISTRY_KEY).value();
-        ScriptRoutine routine = type.create(component);
-        component.routines().add(routine);
+            var type = RegistryEntryArgumentType.getRegistryEntry(context, "type", ScriptRoutineType.REGISTRY_KEY)
+                    .value();
+            ScriptRoutine routine = type.create(component);
+            component.routines().add(routine);
 
-        return 1;
+            return 1;
+        } catch (Throwable e) {
+            MobScripting.LOGGER.error("Error executing command.", e);
+            throw new SimpleCommandExceptionType(Text.literal("Error executing command. See console for details."))
+                    .create();
+        }
     }
     
     private static int clear(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

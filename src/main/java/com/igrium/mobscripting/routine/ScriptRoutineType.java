@@ -49,5 +49,6 @@ public class ScriptRoutineType<T extends ScriptRoutine> {
 
     }
 
-    public static final ScriptRoutineType<TestRoutine> TEST_ROUTINE = register(new Identifier("mob-scripting"), TestRoutine::new);
+    public static final ScriptRoutineType<TestRoutine> TEST_ROUTINE = register(new Identifier("mob-scripting:test"), TestRoutine::new);
+    public static final ScriptRoutineType<TargetRoutine> TARGET = register(new Identifier("mob-scripting:target"), TargetRoutine::new);
 }

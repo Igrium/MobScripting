@@ -5,6 +5,7 @@ import com.igrium.mobscripting.MobScripting;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 
 /**
  * A routine that a mob can be made to enact.
@@ -42,6 +43,10 @@ public abstract class ScriptRoutine {
 
     public final LivingEntity getEntity() {
         return getEntityComponent().getEntity();
+    }
+
+    public ServerWorld getServerWorld() {
+        return (ServerWorld) getEntity().getWorld();
     }
 
     public final boolean isRunning() {
