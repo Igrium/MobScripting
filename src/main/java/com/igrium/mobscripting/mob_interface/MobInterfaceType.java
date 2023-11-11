@@ -8,7 +8,6 @@ import java.util.function.Function;
 import org.jetbrains.annotations.Nullable;
 
 import com.igrium.mobscripting.mob_interface.types.MobEntityInterfaces;
-import com.mojang.logging.LogUtils;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
@@ -54,22 +53,18 @@ public final class MobInterfaceType<T> {
      */
     @Nullable
     public T getForEntity(LivingEntity entity) {
-        try {
-            var cached = cache.get(entity);
-            if (cached != null) {
-                return cached;
-            }
-
-            var factory = getFactory(entity.getClass());
-            if (factory == null) return null;
-
-            T impl = factory.create(entity);
-            cache.put(entity, impl);
-            return impl;
-        } catch (Throwable e) {
-            LogUtils.getLogger().error("Error getting mob interface", e);
-            return null;
+        var cached = cache.get(entity);
+        if (cached != null) {
+            return cached;
         }
+
+        var factory = getFactory(entity.getClass());
+        if (factory == null)
+            return null;
+
+        T impl = factory.create(entity);
+        cache.put(entity, impl);
+        return impl;
     }
 
     @Nullable
@@ -88,7 +83,7 @@ public final class MobInterfaceType<T> {
      * An mob that can target & attack other entities.
      */
     public static final MobInterfaceType<Targetable> TARGETABLE = new MobInterfaceType<>();
-    {
+    static {
         TARGETABLE.register(MobEntity.class, MobEntityInterfaces::new);
     }
 }
