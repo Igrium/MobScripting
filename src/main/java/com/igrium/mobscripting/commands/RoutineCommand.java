@@ -45,12 +45,12 @@ public class RoutineCommand {
         int i = 0;
             
         EntityScriptComponent component = EntityScriptComponent.get(ent);
-        if (component.getRoutines().isEmpty()) {
+        if (component.routines().isEmpty()) {
             context.getSource().sendFeedback(() -> Text.literal("This entity has no routines."), false);
             return 0;
         }
 
-        for (ScriptRoutine routine : component.getRoutines()) {
+        for (ScriptRoutine routine : component.routines()) {
             context.getSource().sendFeedback(() -> Text.literal(routine.getType().getID().toString()), false);
         }
         i++;
@@ -64,7 +64,7 @@ public class RoutineCommand {
 
         var type = RegistryEntryArgumentType.getRegistryEntry(context, "type", ScriptRoutineType.REGISTRY_KEY).value();
         ScriptRoutine routine = type.create(component);
-        component.addRoutine(routine);
+        component.routines().add(routine);
 
         return 1;
     }
@@ -73,8 +73,8 @@ public class RoutineCommand {
         LivingEntity entity = getEntity(context);
         EntityScriptComponent component = EntityScriptComponent.get(entity);
         
-        int count = component.getRoutines().size();
-        component.clearRoutines();
+        int count = component.routines().size();
+        component.routines().clear();
         return count;
     }
 

@@ -72,8 +72,11 @@ public abstract class ScriptRoutine {
     
     /**
      * Called when the routine shuts down.
+     * 
+     * @param interrupted If this routine was interrupted. The exact definition of
+     *                    this is up to the calling class.
      */
-    protected abstract void onStop();
+    protected abstract void onStop(boolean interrupted);
 
     /**
      * Called when an exception thrown by the routine goes uncaught.
@@ -82,7 +85,7 @@ public abstract class ScriptRoutine {
      */
     protected void onException(Exception e) {
         MobScripting.LOGGER.error("Error in script routine " + type.getID(), e);
-        if (!isShuttingDown) stop();
+        if (!isShuttingDown) stop(true);
     }
 
     /**
@@ -115,11 +118,13 @@ public abstract class ScriptRoutine {
     
     /**
      * Stop the routine.
+     * @param interrupted If this routine was interrupted. The exact definition of
+     *                    this is up to the calling class.
      */
-    public final void stop() {
+    public final void stop(boolean interrupted) {
         isShuttingDown = true;
         try {
-            onStop();
+            onStop(interrupted);
         } catch (Exception e) {
             onException(e);
         }

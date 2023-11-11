@@ -1,6 +1,5 @@
 package com.igrium.mobscripting;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,9 +7,8 @@ import java.util.Queue;
 
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
+import com.igrium.mobscripting.util.PerceptibleList;
 
-import dev.onyxstudios.cca.api.v3.component.load.ServerLoadAwareComponent;
-import dev.onyxstudios.cca.api.v3.component.load.ServerUnloadAwareComponent;
 import dev.onyxstudios.cca.api.v3.component.tick.ServerTickingComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -19,7 +17,7 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.util.Identifier;
 
 
-public class EntityScriptComponent implements ServerTickingComponent, ServerLoadAwareComponent, ServerUnloadAwareComponent {
+public class EntityScriptComponent implements ServerTickingComponent {
 
     public static EntityScriptComponent get(LivingEntity entity) {
         return MobScriptingComponents.ENTITY_SCRIPT.get(entity);
@@ -28,6 +26,22 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
     private final LivingEntity entity;
 
     private List<ScriptRoutine> routines = new LinkedList<>();
+
+    private PerceptibleList<ScriptRoutine> perceptibleRoutines = new PerceptibleList<ScriptRoutine>(routines) {
+
+        @Override
+        protected void onAdd(ScriptRoutine item) {
+            startupQueue.add(item);
+        }
+
+        @Override
+        protected void onRemove(Object item) {
+            if (item instanceof ScriptRoutine script) {
+                script.stop(false);
+            }
+        }
+        
+    };
 
     /**
      * We keep a queue of routines needing their startup script called instead of
@@ -49,8 +63,8 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
         return entity;
     }
 
-    public List<ScriptRoutine> getRoutines() {
-        return Collections.unmodifiableList(routines);
+    public List<ScriptRoutine> routines() {
+        return perceptibleRoutines;
     }
 
     @Override
@@ -95,8 +109,8 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
     }
 
     public void shutdown() {
-        for (ScriptRoutine routine : routines) {
-            routine.stop();
+            for (ScriptRoutine routine : routines) {
+            routine.stop(true);
         }
     }
 
@@ -120,32 +134,32 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
         }
     }
 
-    @Override
-    public void loadServerside() {
-        startup();
-    }
+    // @Override
+    // public void loadServerside() {
+    //     startup();
+    // }
 
-    @Override
-    public void unloadServerside() {
-        shutdown();
-    }
+    // @Override
+    // public void unloadServerside() {
+    //     shutdown();
+    // }
     
-    public void addRoutine(ScriptRoutine routine) throws IllegalStateException {
-        if (routine.isRunning()) {
-            throw new IllegalStateException("Routine is already running.");
-        }
-        if (routine.getEntityComponent() != this) {
-            throw new IllegalStateException("Routine belongs to the wrong component.");
-        }
+    // public void addRoutine(ScriptRoutine routine) throws IllegalStateException {
+    //     if (routine.isRunning()) {
+    //         throw new IllegalStateException("Routine is already running.");
+    //     }
+    //     if (routine.getEntityComponent() != this) {
+    //         throw new IllegalStateException("Routine belongs to the wrong component.");
+    //     }
 
-        routines.add(routine);
-        startupQueue.add(routine);
-    }
+    //     routines.add(routine);
+    //     startupQueue.add(routine);
+    // }
 
-    public void clearRoutines() {
-        for (ScriptRoutine routine : routines) {
-            routine.stop();
-        }
-        routines.clear();
-    }
+    // public void clearRoutines() {
+    //     for (ScriptRoutine routine : routines) {
+    //         routine.stop();
+    //     }
+    //     routines.clear();
+    // }
 }

@@ -31,7 +31,7 @@ public class TestRoutine extends ScriptRoutine {
     }
 
     @Override
-    protected void onStop() {
+    protected void onStop(boolean interrupted) {
         LOGGER.info("Routine shutting down!");
     }
     
