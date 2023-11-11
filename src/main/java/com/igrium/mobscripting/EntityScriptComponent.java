@@ -5,9 +5,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
+import com.igrium.collections.PerceptibleList;
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
-import com.igrium.mobscripting.util.PerceptibleList;
 
 import dev.onyxstudios.cca.api.v3.component.tick.ServerTickingComponent;
 import net.minecraft.entity.LivingEntity;
@@ -27,21 +27,8 @@ public class EntityScriptComponent implements ServerTickingComponent {
 
     private List<ScriptRoutine> routines = new LinkedList<>();
 
-    private PerceptibleList<ScriptRoutine> perceptibleRoutines = new PerceptibleList<ScriptRoutine>(routines) {
-
-        @Override
-        protected void onAdd(ScriptRoutine item) {
-            startupQueue.add(item);
-        }
-
-        @Override
-        protected void onRemove(Object item) {
-            if (item instanceof ScriptRoutine script) {
-                script.stop(false);
-            }
-        }
-        
-    };
+    private PerceptibleList<ScriptRoutine> perceptibleRoutines = new PerceptibleList<ScriptRoutine>(routines,
+            this::onAddedRoutine, this::onRemovedRoutine);
 
     /**
      * We keep a queue of routines needing their startup script called instead of
@@ -131,6 +118,16 @@ public class EntityScriptComponent implements ServerTickingComponent {
             } else {
                 iterator.remove();
             }
+        }
+    }
+
+    protected void onAddedRoutine(ScriptRoutine routine) {
+        startupQueue.add(routine);
+    }
+
+    protected void onRemovedRoutine(Object item) {
+        if (item instanceof ScriptRoutine routine) {
+            routine.stop(false);
         }
     }
 
