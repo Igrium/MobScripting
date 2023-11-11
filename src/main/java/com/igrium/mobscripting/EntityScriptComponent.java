@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
@@ -27,6 +28,14 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
     private final LivingEntity entity;
 
     private List<ScriptRoutine> routines = new LinkedList<>();
+
+    /**
+     * We keep a queue of routines needing their startup script called instead of
+     * calling them immedietly so we can be assured that all routine shit happens
+     * together.
+     */
+    private Queue<ScriptRoutine> startupQueue = new LinkedList<>();
+
 
     public EntityScriptComponent(LivingEntity entity) {
         this.entity = entity;
@@ -79,20 +88,24 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
         tag.put("routines", list);
     }
 
-    public void startup(boolean resume) {
+    public void startup() {
         for (ScriptRoutine routine : routines) {
-            routine.start(resume);
+            routine.start();
         }
     }
 
     public void shutdown() {
         for (ScriptRoutine routine : routines) {
-            routine.shutdown(false);
+            routine.stop();
         }
     }
 
     @Override
     public void serverTick() {
+        while (!startupQueue.isEmpty()) {
+            startupQueue.poll().start();
+        }
+
         Iterator<ScriptRoutine> iterator = routines.iterator();
         ScriptRoutine routine;
         
@@ -109,7 +122,7 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
 
     @Override
     public void loadServerside() {
-        startup(true);
+        startup();
     }
 
     @Override
@@ -117,4 +130,22 @@ public class EntityScriptComponent implements ServerTickingComponent, ServerLoad
         shutdown();
     }
     
+    public void addRoutine(ScriptRoutine routine) throws IllegalStateException {
+        if (routine.isRunning()) {
+            throw new IllegalStateException("Routine is already running.");
+        }
+        if (routine.getEntityComponent() != this) {
+            throw new IllegalStateException("Routine belongs to the wrong component.");
+        }
+
+        routines.add(routine);
+        startupQueue.add(routine);
+    }
+
+    public void clearRoutines() {
+        for (ScriptRoutine routine : routines) {
+            routine.stop();
+        }
+        routines.clear();
+    }
 }

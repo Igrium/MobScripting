@@ -1,7 +1,5 @@
 package com.igrium.mobscripting.routine;
 
-import org.apache.logging.log4j.core.config.plugins.util.ResolverUtil.Test;
-
 import com.igrium.mobscripting.EntityScriptComponent;
 
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
@@ -12,8 +10,8 @@ import net.minecraft.registry.SimpleRegistry;
 import net.minecraft.util.Identifier;
 
 public class ScriptRoutineType<T extends ScriptRoutine> {
-    public static final SimpleRegistry<ScriptRoutineType<?>> REGISTRY = FabricRegistryBuilder
-            .createSimple(RegistryKey.<ScriptRoutineType<?>>ofRegistry(new Identifier("sadsadasd")))
+    public static final RegistryKey<Registry<ScriptRoutineType<?>>> REGISTRY_KEY = RegistryKey.ofRegistry(new Identifier("mob-scription:routines"));
+    public static final SimpleRegistry<ScriptRoutineType<?>> REGISTRY = FabricRegistryBuilder.createSimple(REGISTRY_KEY)
             .attribute(RegistryAttribute.SYNCED)
             .buildAndRegister();
 

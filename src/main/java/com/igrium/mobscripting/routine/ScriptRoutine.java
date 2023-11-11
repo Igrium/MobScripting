@@ -6,6 +6,14 @@ import com.igrium.mobscripting.MobScripting;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
 
+/**
+ * A routine that a mob can be made to enact.
+ * The general contract with routines is that they're invisibly serializable.
+ * That means that there's no guarentee that the same routine object will be
+ * maintained throughout the routine's lifetime; it may be saved to NBT and
+ * reloaded without notifying code. Therefore, all persistent values should be
+ * saved and loaded from NBT accordingly.
+ */
 public abstract class ScriptRoutine {
 
     public static class ScriptRoutineException extends RuntimeException {
@@ -54,9 +62,8 @@ public abstract class ScriptRoutine {
 
     /**
      * Called when the routine starts up.
-     * @param resume If we're resuming a previous serialized routine.
      */
-    protected abstract void onStart(boolean resume);
+    protected abstract void onStart();
 
     /**
      * Called every tick while the routine is running.
@@ -65,11 +72,8 @@ public abstract class ScriptRoutine {
     
     /**
      * Called when the routine shuts down.
-     * 
-     * @param removed True if this routine has been removed from the entity. False
-     *                if the entity itself is being unloaded or removed.
      */
-    protected abstract void onShutdown(boolean removed);
+    protected abstract void onStop();
 
     /**
      * Called when an exception thrown by the routine goes uncaught.
@@ -78,26 +82,30 @@ public abstract class ScriptRoutine {
      */
     protected void onException(Exception e) {
         MobScripting.LOGGER.error("Error in script routine " + type.getID(), e);
-        if (!isShuttingDown) shutdown(true);
+        if (!isShuttingDown) stop();
     }
 
     /**
      * Start the routine.
-     * @param resume If we're resuming a previous serialized routine.
      */
-    public final void start(boolean resume) {
+    public final void start() {
         if (isRunning)
             throw new IllegalStateException("Routine is already running.");
 
         isRunning = true;
         try {
-            onStart(resume);
+            onStart();
         } catch (Exception e) {
             onException(e);
         }
     }
     
+    /**
+     * Called every tick.
+     */
     public final void tick() {
+        // There's a chance this routine is still in the execution queue after shutdown
+        if (!isRunning) return;
         try {
             onTick();
         } catch (Exception e) {
@@ -108,10 +116,10 @@ public abstract class ScriptRoutine {
     /**
      * Stop the routine.
      */
-    public final void shutdown(boolean removed) {
+    public final void stop() {
         isShuttingDown = true;
         try {
-            onShutdown(false);
+            onStop();
         } catch (Exception e) {
             onException(e);
         }

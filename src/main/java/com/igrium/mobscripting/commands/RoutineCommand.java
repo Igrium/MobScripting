@@ -31,36 +31,59 @@ public class RoutineCommand {
                 literal("list").executes(RoutineCommand::list)
             ).then(
                 literal("add").then(
-                    argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, ScriptRoutineType.REGISTRY.getKey()))
+                    argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, ScriptRoutineType.REGISTRY_KEY))
+                        .executes(RoutineCommand::add)
                 )
+            ).then(
+                literal("clear").executes(RoutineCommand::clear)
             )
         ));
     }
 
     private static int list(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        Entity ent = EntityArgumentType.getEntity(context, "target");
+        LivingEntity ent = getEntity(context);
         int i = 0;
-        if (ent instanceof LivingEntity entity) {
             
-            EntityScriptComponent component = EntityScriptComponent.get(entity);
-            for (ScriptRoutine routine : component.getRoutines()) {
-                context.getSource().sendFeedback(() -> Text.literal(routine.getType().getID().toString()), false);
-            }
-            i++;
-        } else {
-            throw livingEntityException.create();
+        EntityScriptComponent component = EntityScriptComponent.get(ent);
+        if (component.getRoutines().isEmpty()) {
+            context.getSource().sendFeedback(() -> Text.literal("This entity has no routines."), false);
+            return 0;
         }
+
+        for (ScriptRoutine routine : component.getRoutines()) {
+            context.getSource().sendFeedback(() -> Text.literal(routine.getType().getID().toString()), false);
+        }
+        i++;
+
         return i;
     }
 
     private static int add(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        Entity ent = EntityArgumentType.getEntity(context, "target");
-        if (!(ent instanceof LivingEntity)) {
-            throw livingEntityException.create();
-        }
+        LivingEntity entity = getEntity(context);
+        EntityScriptComponent component = EntityScriptComponent.get(entity);
 
-        LivingEntity entity = (LivingEntity) ent;
+        var type = RegistryEntryArgumentType.getRegistryEntry(context, "type", ScriptRoutineType.REGISTRY_KEY).value();
+        ScriptRoutine routine = type.create(component);
+        component.addRoutine(routine);
 
+        return 1;
     }
     
+    private static int clear(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        LivingEntity entity = getEntity(context);
+        EntityScriptComponent component = EntityScriptComponent.get(entity);
+        
+        int count = component.getRoutines().size();
+        component.clearRoutines();
+        return count;
+    }
+
+    private static LivingEntity getEntity(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        Entity ent = EntityArgumentType.getEntity(context, "target");
+        if (ent instanceof LivingEntity entity) {
+            return entity;
+        } else {
+            throw livingEntityException.create();
+        }
+    }
 }
