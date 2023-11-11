@@ -21,6 +21,10 @@ public class MobEntityInterfaces implements Targetable {
 
     @Override
     public boolean setTarget(@Nullable LivingEntity target, boolean force) {
+        if (target == null) {
+            entity.setTarget(null);
+            return true;
+        }
         if (!entity.canTarget(target) && !force) return false;
         if (!target.isAlive()) return false;
         entity.setTarget(target);
