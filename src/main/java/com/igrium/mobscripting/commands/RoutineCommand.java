@@ -2,9 +2,12 @@ package com.igrium.mobscripting.commands;
 
 import com.igrium.mobscripting.EntityScriptComponent;
 import com.igrium.mobscripting.MobScripting;
+import com.igrium.mobscripting.routine.AdvancedScriptRoutineType;
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -16,6 +19,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.command.CommandManager.RegistrationEnvironment;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.server.command.ServerCommandSource;
 
 import static net.minecraft.server.command.CommandManager.*;
@@ -32,13 +36,51 @@ public class RoutineCommand {
                 literal("list").executes(RoutineCommand::list)
             ).then(
                 literal("add").then(
-                    argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, ScriptRoutineType.REGISTRY_KEY))
-                        .executes(RoutineCommand::add)
+                    literal("simple").then(
+                        argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, ScriptRoutineType.REGISTRY_KEY))
+                            .executes(RoutineCommand::add)
+                    )
+                ).then(
+                    literal("advanced").then(createAdvancedRoutineArguments())
                 )
             ).then(
                 literal("clear").executes(RoutineCommand::clear)
             )
         ));
+    }
+
+    private static LiteralArgumentBuilder<ServerCommandSource> createAdvancedRoutineArguments() {
+        LiteralArgumentBuilder<ServerCommandSource> root = literal("advanced");
+
+        for (Identifier id : ScriptRoutineType.REGISTRY.getIds()) {
+            ScriptRoutineType<?> type = ScriptRoutineType.REGISTRY.get(id);
+            if (type instanceof AdvancedScriptRoutineType<?> adv) {
+                root = root.then(
+                    literal(id.toString()).then(adv.getArgumentBuilder(null, context -> addWithArgs(context, id)))
+                );
+            }
+        }
+
+        return root;
+    }
+
+    private static int addWithArgs(CommandContext<ServerCommandSource> context, Identifier id) throws CommandSyntaxException {
+        LivingEntity entity = getEntity(context);
+        EntityScriptComponent component = EntityScriptComponent.get(entity);
+
+        var type = ScriptRoutineType.REGISTRY.get(id);
+        ScriptRoutine routine;
+
+        if (type instanceof AdvancedScriptRoutineType<?> adv) {
+            routine = adv.createWithArgs(context, component);
+        } else {
+            throw new SimpleCommandExceptionType(Text.literal(
+                    "Non-advanced script routine was evaluated in the advanced routine brigadier tree. This should not happen."))
+                    .create();
+        }
+
+        component.routines().add(routine);
+        return 1;
     }
 
     private static int list(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

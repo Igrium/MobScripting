@@ -5,13 +5,41 @@ import java.util.UUID;
 import com.igrium.mobscripting.EntityScriptComponent;
 import com.igrium.mobscripting.mob_interface.MobInterfaceType;
 import com.igrium.mobscripting.mob_interface.Targetable;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
 
 public class TargetRoutine extends ScriptRoutine {
+
+    public static class Type extends AdvancedScriptRoutineType<TargetRoutine> {
+
+        public Type() {
+            super(TargetRoutine::new);
+        }
+
+        @Override
+        public TargetRoutine createWithArgs(CommandContext<ServerCommandSource> context, EntityScriptComponent component) throws CommandSyntaxException {
+            TargetRoutine routine = new TargetRoutine(this, component);
+            routine.setTarget(EntityArgumentType.getEntity(context, "targetEnt"));
+            return routine;
+        }
+
+        @Override
+        public ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(ArgumentBuilder<ServerCommandSource, ?> then,
+                Command<ServerCommandSource> executes) {
+            return CommandManager.argument("targetEnt", EntityArgumentType.entity()).executes(executes);
+        }
+
+    }
 
     private UUID target;
     private Entity lastTarget;
