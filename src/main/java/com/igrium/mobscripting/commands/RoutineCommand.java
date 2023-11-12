@@ -2,15 +2,15 @@ package com.igrium.mobscripting.commands;
 
 import com.igrium.mobscripting.EntityScriptComponent;
 import com.igrium.mobscripting.MobScripting;
-import com.igrium.mobscripting.routine.AdvancedScriptRoutineType;
+import com.igrium.mobscripting.routine.ComplexScriptRoutineType;
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -41,7 +41,7 @@ public class RoutineCommand {
                             .executes(RoutineCommand::add)
                     )
                 ).then(
-                    literal("advanced").then(createAdvancedRoutineArguments())
+                    createAdvancedRoutineArguments()
                 )
             ).then(
                 literal("clear").executes(RoutineCommand::clear)
@@ -54,9 +54,11 @@ public class RoutineCommand {
 
         for (Identifier id : ScriptRoutineType.REGISTRY.getIds()) {
             ScriptRoutineType<?> type = ScriptRoutineType.REGISTRY.get(id);
-            if (type instanceof AdvancedScriptRoutineType<?> adv) {
+            LiteralCommandNode<ServerCommandSource> then = literal("run").executes(context -> addWithArgs(context, id)).build();
+            
+            if (type instanceof ComplexScriptRoutineType<?> adv) {
                 root = root.then(
-                    literal(id.toString()).then(adv.getArgumentBuilder(null, context -> addWithArgs(context, id)))
+                    literal(id.toString()).then(adv.getArgumentBuilder(then))
                 );
             }
         }
@@ -71,7 +73,7 @@ public class RoutineCommand {
         var type = ScriptRoutineType.REGISTRY.get(id);
         ScriptRoutine routine;
 
-        if (type instanceof AdvancedScriptRoutineType<?> adv) {
+        if (type instanceof ComplexScriptRoutineType<?> adv) {
             routine = adv.createWithArgs(context, component);
         } else {
             throw new SimpleCommandExceptionType(Text.literal(

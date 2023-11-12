@@ -1,24 +1,20 @@
 package com.igrium.mobscripting.routine;
 
 import com.igrium.mobscripting.EntityScriptComponent;
-import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.tree.CommandNode;
 
 import net.minecraft.server.command.ServerCommandSource;
 
 /**
  * A script routine that can be created from brigadier arguments.
  */
-public abstract class AdvancedScriptRoutineType<T extends ScriptRoutine> extends ScriptRoutineType<T> {
+public abstract class ComplexScriptRoutineType<T extends ScriptRoutine> extends ScriptRoutineType<T> {
 
     public static interface BrigadierRoutineFactory<T> {
         public T create(CommandContext<ServerCommandSource> context) throws CommandSyntaxException;
-    }
-
-    public AdvancedScriptRoutineType(RoutineFactory<T> factory) {
-        super(factory);
     }
     
     /**
@@ -34,5 +30,5 @@ public abstract class AdvancedScriptRoutineType<T extends ScriptRoutine> extends
      * @param executes Command to append with <code>executes</code> to all endpoints.
      * @return Brigadier argument builder.
      */
-    public abstract ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(ArgumentBuilder<ServerCommandSource, ?> then, Command<ServerCommandSource> executes);
+    public abstract ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(CommandNode<ServerCommandSource> redirect);
 }

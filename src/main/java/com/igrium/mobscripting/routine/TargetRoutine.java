@@ -1,14 +1,15 @@
 package com.igrium.mobscripting.routine;
 
 import java.util.UUID;
+import java.util.Objects;
 
 import com.igrium.mobscripting.EntityScriptComponent;
 import com.igrium.mobscripting.mob_interface.MobInterfaceType;
 import com.igrium.mobscripting.mob_interface.Targetable;
-import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.command.argument.EntityArgumentType;
@@ -20,11 +21,7 @@ import net.minecraft.server.command.ServerCommandSource;
 
 public class TargetRoutine extends ScriptRoutine {
 
-    public static class Type extends AdvancedScriptRoutineType<TargetRoutine> {
-
-        public Type() {
-            super(TargetRoutine::new);
-        }
+    public static class Type extends ComplexScriptRoutineType<TargetRoutine> {
 
         @Override
         public TargetRoutine createWithArgs(CommandContext<ServerCommandSource> context, EntityScriptComponent component) throws CommandSyntaxException {
@@ -34,9 +31,13 @@ public class TargetRoutine extends ScriptRoutine {
         }
 
         @Override
-        public ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(ArgumentBuilder<ServerCommandSource, ?> then,
-                Command<ServerCommandSource> executes) {
-            return CommandManager.argument("targetEnt", EntityArgumentType.entity()).executes(executes);
+        public ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(CommandNode<ServerCommandSource> redirect) {
+            return CommandManager.argument("targetEnt", EntityArgumentType.entity()).then(redirect);
+        }
+
+        @Override
+        public TargetRoutine create(EntityScriptComponent component) {
+            return new TargetRoutine(this, component);
         }
 
     }
@@ -84,6 +85,11 @@ public class TargetRoutine extends ScriptRoutine {
         }
 
         LivingEntity target = (LivingEntity) getServerWorld().getEntity(this.target);
+        if (target == null) {
+            stop(false);
+            return;
+        }
+
         if (target != lastTarget) {
             if (targetable == null) {
                 noTarget();
@@ -102,6 +108,9 @@ public class TargetRoutine extends ScriptRoutine {
     @Override
     protected void onStop(boolean interrupted) {
         LogUtils.getLogger().info("Target routine complete!");
+        if (Objects.equals(lastTarget, targetable.getTarget())) {
+            targetable.setTarget(null, false);
+        }
     }
     
     private void noTarget() {

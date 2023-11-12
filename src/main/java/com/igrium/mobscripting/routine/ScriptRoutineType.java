@@ -9,25 +9,14 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.SimpleRegistry;
 import net.minecraft.util.Identifier;
 
-public class ScriptRoutineType<T extends ScriptRoutine> {
+public abstract class ScriptRoutineType<T extends ScriptRoutine> {
     public static final RegistryKey<Registry<ScriptRoutineType<?>>> REGISTRY_KEY = RegistryKey.ofRegistry(new Identifier("mob-scription:routines"));
     public static final SimpleRegistry<ScriptRoutineType<?>> REGISTRY = FabricRegistryBuilder.createSimple(REGISTRY_KEY)
             .attribute(RegistryAttribute.SYNCED)
             .buildAndRegister();
 
-    public static interface RoutineFactory<T extends ScriptRoutine> {
-        public T create(ScriptRoutineType<T> type, EntityScriptComponent component);
-    }
+    public abstract T create(EntityScriptComponent component);
 
-    private final RoutineFactory<T> factory;
-
-    public ScriptRoutineType(RoutineFactory<T> factory) {
-        this.factory = factory;
-    }
-
-    public T create(EntityScriptComponent component) {
-        return factory.create(this, component);
-    }
 
     public Identifier getID() {
         Identifier id = REGISTRY.getId(this);
@@ -40,8 +29,8 @@ public class ScriptRoutineType<T extends ScriptRoutine> {
         return Registry.register(REGISTRY, id, type);
     }
 
-    public static <T extends ScriptRoutine> ScriptRoutineType<T> register(Identifier id, RoutineFactory<T> factory) {
-        return register(id, new ScriptRoutineType<>(factory));
+    public static <T extends ScriptRoutine> ScriptRoutineType<T> register(Identifier id, SimpleScriptRoutineType.ScriptRoutineFactory<T> factory) {
+        return register(id, new SimpleScriptRoutineType<>(factory));
     }
 
     // Empty method for class loader

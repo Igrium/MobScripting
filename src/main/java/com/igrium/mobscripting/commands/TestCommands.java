@@ -7,6 +7,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -32,6 +33,34 @@ public class TestCommands {
                 )
             )
         ));
+
+        // LiteralCommandNode<ServerCommandSource> fooNode = dispatcher.register(literal("foo").executes(
+        //     context -> {
+        //         context.getSource().sendMessage(Text.literal("Called /foo!"));
+        //         return 1;
+        //     }
+        // ));
+
+        // dispatcher.register(literal("bar").then(
+        //     literal("bar1").redirect(fooNode)
+        // ));
+
+        
+
+        final LiteralCommandNode<ServerCommandSource> fooNode = dispatcher.register(literal("foo").then(
+            literal("bar").executes(context -> {
+                context.getSource().sendMessage(Text.literal("Activated foo bar!"));
+                return 1;
+            })
+        ).executes(context -> {
+            context.getSource().sendMessage(Text.literal("Activated foo on its own."));
+            return 1;
+        }));
+
+        dispatcher.register(literal("foo2").forward(fooNode, null, true).executes(context -> {
+            context.getSource().sendMessage(Text.literal("Called foo2"));
+            return 1;
+        }));
     }
 
     private static int target(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
