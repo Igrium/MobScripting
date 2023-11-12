@@ -74,4 +74,29 @@ public class PerceptibleCollectionTest {
             Assertions.assertArrayEquals(new Object[] {"Hi i not a test"}, list.toArray());
         }
     }
+
+    public static class PerceptibleClearTest {
+        int itemsCleared = 0;
+
+        PerceptibleList<String> list = new PerceptibleList<>(new ArrayList<>(), this::onAdded, this::onRemoved);
+
+        void onAdded(String iten) {
+
+        }
+
+        void onRemoved(Object item) {
+            itemsCleared++;
+        }
+
+        @Test
+        public void testPerceptibleClear() {
+            list.add("item1");
+            list.add("item2");
+            list.add("item3");
+
+            list.clear();
+
+            assertEquals(3, itemsCleared, "onRemoved should be called 3 times.");
+        }
+    }
 }

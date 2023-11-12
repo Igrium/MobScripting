@@ -105,10 +105,10 @@ public class PerceptibleCollection<T, C extends Collection<T>> implements Collec
 
     @Override
     public void clear() {
-        base.clear();
         for (T item : this) {
             onRemoved(item);
         }
+        base.clear();
     }
 
     protected void onAdded(T item) {
