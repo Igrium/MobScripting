@@ -53,6 +53,14 @@ public abstract class ScriptRoutine {
         return isRunning;
     }
 
+    /**
+     * <p><strong><em>INTERNAL USE ONLY</em></strong></p>
+     */
+    @Deprecated
+    public void setRunning(boolean isRunning) {
+        this.isRunning = isRunning;
+    }
+
     public boolean isShuttingDown() {
         return isShuttingDown;
     }

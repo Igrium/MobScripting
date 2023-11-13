@@ -74,7 +74,7 @@ public class TargetRoutine extends ScriptRoutine {
     @Override
     public void readFromNbt(NbtCompound nbt) {
         super.readFromNbt(nbt);
-        nbt.putUuid("target", target);
+        this.target = nbt.getUuid("target");
     }
 
     @Override

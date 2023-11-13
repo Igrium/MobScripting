@@ -55,6 +55,7 @@ public class EntityScriptComponent implements ServerTickingComponent {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void readFromNbt(NbtCompound tag) {
         NbtList list = tag.getList("routines", NbtElement.COMPOUND_TYPE);
         routines.clear();
@@ -69,8 +70,10 @@ public class EntityScriptComponent implements ServerTickingComponent {
                 MobScripting.LOGGER.warn("Unknown routine type: " + id);
                 continue;
             }
-
-            routines.add(type.create(this));
+            ScriptRoutine routine = type.create(this);
+            routine.readFromNbt(item);
+            routine.setRunning(true);
+            routines.add(routine);
         }
     }
 
