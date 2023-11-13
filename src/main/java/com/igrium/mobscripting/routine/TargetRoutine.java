@@ -6,6 +6,7 @@ import java.util.Objects;
 import com.igrium.mobscripting.EntityScriptComponent;
 import com.igrium.mobscripting.mob_interface.MobInterfaceType;
 import com.igrium.mobscripting.mob_interface.Targetable;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -15,6 +16,7 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 
@@ -26,12 +28,24 @@ public class TargetRoutine extends ScriptRoutine {
         public TargetRoutine createWithArgs(CommandContext<ServerCommandSource> context, EntityScriptComponent component) throws CommandSyntaxException {
             TargetRoutine routine = new TargetRoutine(this, component);
             routine.setTarget(EntityArgumentType.getEntity(context, "targetEnt"));
+
+            float timeout = 0;
+            try {
+                timeout = FloatArgumentType.getFloat(context, "timeout");
+            } catch (IllegalArgumentException e) {}
+
+            if (timeout > 0) {
+                routine.setTimeLeft(timeout);
+            }
+
             return routine;
         }
 
         @Override
         public ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(BrigadierExitpointAppender exit) {
-            return exit.exit(CommandManager.argument("targetEnt", EntityArgumentType.entity()));
+            return exit.exit(CommandManager.argument("targetEnt", EntityArgumentType.entity()).then(
+                exit.exit(CommandManager.argument("timeout", FloatArgumentType.floatArg(0)))
+            ));
         }
 
         @Override
@@ -43,6 +57,11 @@ public class TargetRoutine extends ScriptRoutine {
 
     private UUID target;
     private Entity lastTarget;
+
+    /**
+     * How many ticks are left before the routine fails.
+     */
+    private int timeLeft = -1;
 
     private Targetable targetable;
 
@@ -59,6 +78,18 @@ public class TargetRoutine extends ScriptRoutine {
         this.target = target.getUuid();
     }
 
+    public final int getTimeLeft() {
+        return timeLeft;
+    }
+
+    public void setTimeLeft(int timeLeft) {
+        this.timeLeft = timeLeft;
+    }
+
+    public void setTimeLeft(float timeLeft) {
+        this.timeLeft = (int) (timeLeft * 20);
+    }
+
     @Override
     protected void onStart() {
     
@@ -68,12 +99,16 @@ public class TargetRoutine extends ScriptRoutine {
     public void writeToNbt(NbtCompound nbt) {
         super.writeToNbt(nbt);
         nbt.putUuid("target", target);
+        nbt.putInt("timeLeft", timeLeft);
     }
 
     @Override
     public void readFromNbt(NbtCompound nbt) {
         super.readFromNbt(nbt);
         this.target = nbt.getUuid("target");
+        if (nbt.contains("timeLeft", NbtElement.INT_TYPE)) {
+            setTimeLeft(nbt.getInt("timeLeft"));
+        }
     }
 
     @Override
@@ -87,6 +122,15 @@ public class TargetRoutine extends ScriptRoutine {
         if (target == null) {
             stop(false);
             return;
+        }
+
+        if (timeLeft >= 0) {
+            if (timeLeft == 0) {
+                stop(true);
+                return;
+            } else {
+                timeLeft--;
+            }
         }
 
         if (target != lastTarget) {
