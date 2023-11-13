@@ -9,7 +9,6 @@ import com.igrium.mobscripting.mob_interface.Targetable;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.command.argument.EntityArgumentType;
@@ -31,8 +30,8 @@ public class TargetRoutine extends ScriptRoutine {
         }
 
         @Override
-        public ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(CommandNode<ServerCommandSource> redirect) {
-            return CommandManager.argument("targetEnt", EntityArgumentType.entity()).then(redirect);
+        public ArgumentBuilder<ServerCommandSource, ?> getArgumentBuilder(BrigadierExitpointAppender exit) {
+            return exit.exit(CommandManager.argument("targetEnt", EntityArgumentType.entity()));
         }
 
         @Override
@@ -100,7 +99,7 @@ public class TargetRoutine extends ScriptRoutine {
         }
 
         // If the mob AI changed the target on its own
-        if (!targetable.getTarget().equals(target)) {
+        if (!Objects.equals(targetable.getTarget(), target)) {
             stop(false);
         }
     }

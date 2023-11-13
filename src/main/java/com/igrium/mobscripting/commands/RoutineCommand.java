@@ -1,18 +1,19 @@
 package com.igrium.mobscripting.commands;
 
 import com.igrium.mobscripting.EntityScriptComponent;
-import com.igrium.mobscripting.MobScripting;
 import com.igrium.mobscripting.routine.ComplexScriptRoutineType;
 import com.igrium.mobscripting.routine.ScriptRoutine;
 import com.igrium.mobscripting.routine.ScriptRoutineType;
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import net.minecraft.command.CommandRegistryAccess;
+import net.minecraft.command.argument.CommandFunctionArgumentType;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.RegistryEntryArgumentType;
 import net.minecraft.entity.Entity;
@@ -37,11 +38,10 @@ public class RoutineCommand {
             ).then(
                 literal("add").then(
                     literal("simple").then(
-                        argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, ScriptRoutineType.REGISTRY_KEY))
-                            .executes(RoutineCommand::add)
+                        appendFinishNodes(argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, ScriptRoutineType.REGISTRY_KEY)), RoutineCommand::add)
                     )
                 ).then(
-                    createAdvancedRoutineArguments()
+                    buildAdvancedRoutineArguments()
                 )
             ).then(
                 literal("clear").executes(RoutineCommand::clear)
@@ -49,21 +49,42 @@ public class RoutineCommand {
         ));
     }
 
-    private static LiteralArgumentBuilder<ServerCommandSource> createAdvancedRoutineArguments() {
+    private static LiteralArgumentBuilder<ServerCommandSource> buildAdvancedRoutineArguments() {
         LiteralArgumentBuilder<ServerCommandSource> root = literal("advanced");
 
         for (Identifier id : ScriptRoutineType.REGISTRY.getIds()) {
             ScriptRoutineType<?> type = ScriptRoutineType.REGISTRY.get(id);
-            LiteralCommandNode<ServerCommandSource> then = literal("run").executes(context -> addWithArgs(context, id)).build();
-            
+
             if (type instanceof ComplexScriptRoutineType<?> adv) {
                 root = root.then(
-                    literal(id.toString()).then(adv.getArgumentBuilder(then))
+                    literal(id.toString()).then(
+                        adv.getArgumentBuilder(node -> appendFinishNodes(node, context -> addWithArgs(context, id)))
+                    )
                 );
             }
         }
 
         return root;
+    }
+
+    private static ArgumentBuilder<ServerCommandSource, ?> appendFinishNodes(ArgumentBuilder<ServerCommandSource, ?> builder, Command<ServerCommandSource> command) {
+        return builder.then(
+            literal("onComplete").then(
+                argument("completeFunction", CommandFunctionArgumentType.commandFunction()).then(
+                    literal("onInterrupted").then(
+                        argument("interruptFunction", CommandFunctionArgumentType.commandFunction()).executes(command)
+                    )
+                ).executes(command)
+            )
+        ).then(
+            literal("onInterrupted").then(
+                argument("interruptFunction", CommandFunctionArgumentType.commandFunction()).then(
+                    literal("onComplete").then(
+                        argument("completeFunction", CommandFunctionArgumentType.commandFunction()).executes(command)
+                    )
+                ).executes(command)
+            )
+        ).executes(command);
     }
 
     private static int addWithArgs(CommandContext<ServerCommandSource> context, Identifier id) throws CommandSyntaxException {
@@ -81,10 +102,47 @@ public class RoutineCommand {
                     .create();
         }
 
+        try {
+            Identifier onComplete = CommandFunctionArgumentType.getFunctions(context, "completeFunction")
+                    .iterator().next()
+                    .getId();
+            routine.setCompleteFunction(onComplete);
+        } catch (IllegalArgumentException e) {
+        }
+        
+        try {
+            Identifier onInterrupt = CommandFunctionArgumentType.getFunctions(context, "interruptFunction")
+                    .iterator().next()
+                    .getId();
+            routine.setInterruptFunction(onInterrupt);
+        } catch (IllegalArgumentException e) {
+        }
+
         component.routines().add(routine);
         return 1;
     }
 
+    private static int add(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        LivingEntity entity = getEntity(context);
+        EntityScriptComponent component = EntityScriptComponent.get(entity);
+
+        var type = RegistryEntryArgumentType.getRegistryEntry(context, "type", ScriptRoutineType.REGISTRY_KEY)
+                .value();
+        ScriptRoutine routine = type.create(component);
+        component.routines().add(routine);
+        return 1;
+    }
+
+    private static int clear(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        LivingEntity entity = getEntity(context);
+        EntityScriptComponent component = EntityScriptComponent.get(entity);
+        
+        int count = component.routines().size();
+        component.routines().clear();
+        return count;
+    }
+
+    
     private static int list(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         LivingEntity ent = getEntity(context);
         int i = 0;
@@ -101,33 +159,6 @@ public class RoutineCommand {
         i++;
 
         return i;
-    }
-
-    private static int add(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        try {
-            LivingEntity entity = getEntity(context);
-            EntityScriptComponent component = EntityScriptComponent.get(entity);
-
-            var type = RegistryEntryArgumentType.getRegistryEntry(context, "type", ScriptRoutineType.REGISTRY_KEY)
-                    .value();
-            ScriptRoutine routine = type.create(component);
-            component.routines().add(routine);
-
-            return 1;
-        } catch (Throwable e) {
-            MobScripting.LOGGER.error("Error executing command.", e);
-            throw new SimpleCommandExceptionType(Text.literal("Error executing command. See console for details."))
-                    .create();
-        }
-    }
-    
-    private static int clear(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        LivingEntity entity = getEntity(context);
-        EntityScriptComponent component = EntityScriptComponent.get(entity);
-        
-        int count = component.routines().size();
-        component.routines().clear();
-        return count;
     }
 
     private static LivingEntity getEntity(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

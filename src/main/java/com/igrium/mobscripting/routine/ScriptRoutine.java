@@ -1,11 +1,16 @@
 package com.igrium.mobscripting.routine;
 
+import org.jetbrains.annotations.Nullable;
+
 import com.igrium.mobscripting.EntityScriptComponent;
 import com.igrium.mobscripting.MobScripting;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.function.CommandFunctionManager;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Identifier;
 
 /**
  * A routine that a mob can be made to enact.
@@ -24,6 +29,28 @@ public abstract class ScriptRoutine {
 
     private final ScriptRoutineType<?> type;
     private final EntityScriptComponent entityComponent;
+
+    @Nullable
+    private Identifier completeFunction = null;
+
+    @Nullable
+    private Identifier interruptFunction = null;
+
+    public final Identifier getCompleteFunction() {
+        return completeFunction;
+    }
+
+    public void setCompleteFunction(Identifier completeFunction) {
+        this.completeFunction = completeFunction;
+    }
+
+    public final Identifier getInterruptFunction() {
+        return interruptFunction;
+    }
+
+    public void setInterruptFunction(Identifier interruptFunction) {
+        this.interruptFunction = interruptFunction;
+    }
 
     private boolean isRunning;
     private boolean isShuttingDown;
@@ -54,7 +81,7 @@ public abstract class ScriptRoutine {
     }
 
     /**
-     * <p><strong><em>INTERNAL USE ONLY</em></strong></p>
+     * <p><strong><em>INTERNAL SERIALIZATION USE ONLY</em></strong></p>
      */
     @Deprecated
     public void setRunning(boolean isRunning) {
@@ -141,7 +168,39 @@ public abstract class ScriptRoutine {
         } catch (Exception e) {
             onException(e);
         }
+        
         isRunning = false;
         isShuttingDown = false;
+
+        CommandFunctionManager functionManager = getEntity().getServer().getCommandFunctionManager();
+        if (!interrupted && completeFunction != null) {
+            var onComplete = functionManager.getFunction(completeFunction);
+
+            if (onComplete.isPresent()) {
+                functionManager.execute(onComplete.get(), getFinishCommandSource());
+            } else {
+                MobScripting.LOGGER.warn("Script routine had an unknown onComplete function: " + completeFunction);
+            }
+        }
+
+        if (interrupted && interruptFunction != null) {
+            var onInterrupted = functionManager.getFunction(interruptFunction);
+
+            if (onInterrupted.isPresent()) {
+                functionManager.execute(null, getFinishCommandSource());
+            } else {
+                MobScripting.LOGGER.warn("Script routine had an unknown onInterrupt function: " + interruptFunction);
+            }
+        }
+    }
+
+    public ServerCommandSource getFinishCommandSource() {
+        return getEntity().getServer().getCommandSource()
+                .withEntity(getEntity())
+                .withPosition(getEntity().getPos())
+                .withRotation(getEntity().getRotationClient())
+                .withWorld(getServerWorld())
+                .withLevel(2)
+                .withSilent();
     }
 }
